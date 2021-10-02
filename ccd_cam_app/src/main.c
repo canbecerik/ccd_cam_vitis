@@ -12,6 +12,7 @@
 #include "netif/xadapter.h"
 #include "xscutimer.h"
 
+// #define MEM_BASE_ADDR		(XPAR_PS7_DDR_0_S_AXI_BASEADDR + 0x1000000)
 
 #define MEM_BASE_ADDR		(0x20000000)
 #define MEM_BASE_ADDR2		(0x30000000)
@@ -136,48 +137,116 @@ void init_heartbeat(void)
 void afe_config(int ic_num)
 {
 	//babishov
-	// page 0
+		// page 0 in datasheet(page 90)
+
+	// Main Configuration 0
+	// bit 0: registers are unlocked
+	// bit 1: slave/SH_R mode
+	// bit 2: use autodetect CMOS/LVDS clk receiver
+	// bit 3: reserved
+	// bit 4: SH_R capture using rising edge of selected clk source
+	// bit 5: SH_R use internal CLK from XTAL source
+	// bit 6: reserved
+	// bit 7: PLL not locked
 
 	write_afe(ic_num, 0, 0x00);
+	
+	// Main config 1
+	// 0x40 Resolves to bit 6 high
+	// bit 0: master power down disable
+	// bit 1: reference buffer power down
+	// bit 2: power down CDS/SH adapter
+	// bit 3: SW Reset - FSM and registers, active high, self clearing
+	// 		should reset everything and clear by itself I think
+	// bit 4: SW Reset - only clears state machines
+	// bit 5: calibrate gain - offset / active high, self clearing
+	// bit 6: PLL range Autocalibration of
+	// bit 7: 16+ clk mode for serial interface
+
 	write_afe(ic_num, 1, 0x40);
-	write_afe(ic_num, 2, 0xC2);
-	write_afe(ic_num, 3, 0x46);
-	write_afe(ic_num, 4, 0x08);
-	write_afe(ic_num, 5, 0x40);
-	write_afe(ic_num, 6, 0x00); //no test data
-	write_afe(ic_num, 8, 0x04);
-	write_afe(ic_num, 9, 0x14);
-	write_afe(ic_num, 10, 0x04);
-	write_afe(ic_num, 11, 0x14);
-	write_afe(ic_num, 12, 0x04);
-	write_afe(ic_num, 13, 0x14);
-	write_afe(ic_num, 14, 0x18);
-	write_afe(ic_num, 15, 0x28);
-	write_afe(ic_num, 16, 0x18);
-	write_afe(ic_num, 17, 0x28);
-	write_afe(ic_num, 18, 0x18);
-	write_afe(ic_num, 19, 0x28);
-	write_afe(ic_num, 20, 0x00);
-	write_afe(ic_num, 21, 0x00);
-	write_afe(ic_num, 31, 0x01); // go to the page 1
+	
+	// Main Config 2
+	// 0xC2 to bits 1, 6, 7
+	// bit 0: even/odd CCD sensor disable
+	// bit 1: correlated double sampling mode
+	// bit 2: user supplies ADC rate clock
+	// bit 3: forward color order
+	// bit 5 to 4: color select bits, not used for 3ch
+	// bit 7 to 6: mode select, 3CH mode
 
-	// page 1
-	write_afe(ic_num, 0, 0x00);
-	write_afe(ic_num, 1, 0x61);
-	write_afe(ic_num, 2, 0x61);
-	write_afe(ic_num, 3, 0x61);
-	write_afe(ic_num, 4, 0x90);
-	write_afe(ic_num, 5, 0x00);
-	write_afe(ic_num, 6, 0x90);
-	write_afe(ic_num, 7, 0x00);
-	write_afe(ic_num, 8, 0x76);
-	write_afe(ic_num, 9, 0x00);
-	write_afe(ic_num, 10, 0x90);
-	write_afe(ic_num, 11, 0x00);
-	write_afe(ic_num, 12, 0x90);
-	write_afe(ic_num, 13, 0x00);
-	write_afe(ic_num, 14, 0x76);
-	write_afe(ic_num, 15, 0x00);
+	write_afe(ic_num, 2, 0xC2);
+
+	// Main config 3
+
+	// 0x46 to bits 1, 2, 6
+	// bit 1: sensor polarity, voltage decreases with increasing white level
+	// bit 4 to 2: pixel phase clock select, coarse adj for pixel phase rel to inclk
+	// bit 5: disable bit clp mode
+	// bit 6: enable input bias
+	// bit 7: disable source follower
+
+	write_afe(ic_num, 3, 0x46);
+
+	// Main config 4
+
+	// 0x08 to bit 3
+	// bit 0 to 2: VCLP voltage set to 0.85Va
+	// bit 3: No circuit tied to VCLP output, no current is drawn
+	// bit 4: auto CLPIN not gated by SAMPLE pulse timing
+	// bit 5: auto CLPIN disabled
+	// bit 6: VCLP buffer disabled - use resistor divider voltages directly
+
+	write_afe(ic_num, 4, 0x08);
+
+	// Main config 5
+
+	// 0x40 to bit 6
+	// bit 1 to 2: data scrambler submode, disabled
+	// bit 3 to 4: data scrambler disabled
+	// bit 5: CMOS data CLK override disabled, SH2 out as normal
+	// bit 6: output enabled
+	// bit 7: output format set as LVDS
+
+	write_afe(ic_num, 5, 0x40);
+	// Main config 6 is not set, used for LVDS and AFE test patterns
+
+	write_afe(ic_num, 6, 0x00); //no test data
+
+	write_afe(ic_num, 8, 0x04);	//	OSR CLAMP Start Edge
+	write_afe(ic_num, 9, 0x14);	//	OSR CLAMP Stop Edge
+	write_afe(ic_num, 10, 0x04);	//	OSG CLAMP Start Edge
+	write_afe(ic_num, 11, 0x14);	//	OSG CLAMP Stop Edge
+	write_afe(ic_num, 12, 0x04);	//	OSG CLAMP Start Edge
+	write_afe(ic_num, 13, 0x14);	//	OSB CLAMP Stop Edge
+	write_afe(ic_num, 14, 0x18);	//	OSR SAMPLE Start Edge
+	write_afe(ic_num, 15, 0x28);	//	OSR SAMPLE Stop Edge
+	write_afe(ic_num, 16, 0x18);	//	OSG SAMPLE Start Edge
+	write_afe(ic_num, 17, 0x28);	//	OSG SAMPLE Stop Edge
+	write_afe(ic_num, 18, 0x18);	//	OSB SAMPLE Start Edge
+	write_afe(ic_num, 19, 0x28);	//	OSB SAMPLE Stop Edge
+	write_afe(ic_num, 20, 0x00);	//	Sample and Clamp Monitor 0
+	write_afe(ic_num, 21, 0x00);	//	Sample and Clamp Monitor 1
+	write_afe(ic_num, 31, 0x01);	//	Page register
+
+	// 	go to the page 1
+
+	// page 1 in datasheet(page 91)
+	write_afe(ic_num, 0, 0x00);	//	Gain Mode
+	write_afe(ic_num, 1, 0x61);	//	Red PGA
+	write_afe(ic_num, 2, 0x61);	//	Green PGA
+	write_afe(ic_num, 3, 0x61);	//	Blue PGA
+	write_afe(ic_num, 4, 0x90);	//	Red Even DAC MSB
+	write_afe(ic_num, 5, 0x00);	//	Red Even DAC LSB
+	write_afe(ic_num, 6, 0x90);	//	Green Even DAC MSB
+	write_afe(ic_num, 7, 0x00);	//	Green Even DAC LSB
+	write_afe(ic_num, 8, 0x76);	//	Blue Even DAC MSB
+	write_afe(ic_num, 9, 0x00);	//	Blue Even DAC LSB
+	write_afe(ic_num, 10, 0x90);	//	Red Odd DAC MSB
+	write_afe(ic_num, 11, 0x00);	//	Red Odd DAC LSB
+	write_afe(ic_num, 12, 0x90);	//	Green Odd DAC MSB
+	write_afe(ic_num, 13, 0x00);	//	Green Odd DAC LSB
+	write_afe(ic_num, 14, 0x76);	//	
+	write_afe(ic_num, 15, 0x00);	//	
 	write_afe(ic_num, 31, 0x02); // to page 2
 
 	// page 2
